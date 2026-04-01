@@ -1,0 +1,24 @@
+# Clojure / JVM
+.cpcache/
+.nrepl-port
+target/
+classes/
+*.jar
+*.class
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.calva/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor tooling
+.clj-kondo/
+.lsp/
+
+# Claude Code
+.claude/
