@@ -4,74 +4,70 @@
 
 (defn- flatten-events
   "Flattens data.logs packets into a seq of event maps,
-   each carrying its parent packet's :channel and :table_id."
+   each carrying its parent packet's :channel."
   [logs]
   (mapcat (fn [packet]
-            (let [channel  (:channel packet)
-                  table-id (:table_id packet)]
+            (let [channel (:channel packet)]
               (map (fn [event]
-                     (assoc event :channel channel :table_id table-id))
+                     (assoc event :channel channel))
                    (:data packet))))
           logs))
 
 (defn- extract-channel-player-id
-  "Extracts player ID from a channel string like '/player/p95656346'."
+  "Extracts player ID string from a channel like '/player/p95656346'."
   [channel]
   (when-let [[_ pid] (re-find #"/player/p(\d+)" channel)]
     pid))
 
-(defn- extract-table-id [events]
-  (let [tid (:table_id (first events))]
+(defn- extract-table-id [logs]
+  (let [tid (:table_id (first logs))]
     (when-not tid
-      (throw (ex-info "No table_id found in events"
+      (throw (ex-info "No table_id found in logs"
                       {:type :invalid-replay})))
     (str tid)))
 
-(defn- extract-players [events]
-  (let [setup-events (filter #(= "setupPlayer" (:type %)) events)]
-    (when-not (= 2 (count setup-events))
-      (throw (ex-info (str "Expected 2 setupPlayer events, found " (count setup-events))
-                      {:type :missing-events :event-type "setupPlayer"
-                       :count (count setup-events)})))
-    (mapv (fn [event]
-            (let [args (:args event)]
-              {:player-id (str (:player_id args))
-               :hero      (get-in args [:card :properties :name])
-               :faction   (get-in args [:card :properties :faction])}))
-          setup-events)))
+(defn- extract-players [setup-events]
+  (when-not (= 2 (count setup-events))
+    (throw (ex-info (str "Expected 2 setupPlayer events, found " (count setup-events))
+                    {:type :missing-events :event-type "setupPlayer"
+                     :count (count setup-events)})))
+  (mapv (fn [event]
+          (let [args (:args event)]
+            {:player-id (str (:player_id args))
+             :hero      (get-in args [:card :properties :name])
+             :faction   (get-in args [:card :properties :faction])}))
+        setup-events))
 
-(defn- extract-deck-selections [events]
-  (let [deck-events (filter #(= "updateInitialPrecoDeckSelection" (:type %)) events)]
-    (when-not (= 2 (count deck-events))
-      (throw (ex-info (str "Expected 2 updateInitialPrecoDeckSelection events, found "
-                           (count deck-events))
-                      {:type :missing-events
-                       :event-type "updateInitialPrecoDeckSelection"
-                       :count (count deck-events)})))
-    (let [selections (map (fn [event]
-                            (let [player-id (extract-channel-player-id (:channel event))
-                                  private   (get-in event [:args :args :_private])
-                                  selection (:selection private)]
-                              (when-not player-id
-                                (throw (ex-info "Cannot extract player ID from channel"
-                                                {:type :invalid-replay
-                                                 :channel (:channel event)})))
-                              {:player-id player-id
-                               :selection selection
-                               :api       (:API private)}))
-                          deck-events)]
-      (if (every? #(= "API" (:selection %)) selections)
-        (into {} (map (fn [{:keys [player-id api]}]
-                        [player-id {:deck-name (:deckName api)
-                                    :deck-id   (:id api)
-                                    :faction   (:faction api)}])
-                      selections))
-        (do (log/info "Preconstructed deck detected, skipping replay")
-            nil)))))
+(defn- extract-deck-selections [deck-events]
+  (when-not (= 2 (count deck-events))
+    (throw (ex-info (str "Expected 2 updateInitialPrecoDeckSelection events, found "
+                         (count deck-events))
+                    {:type :missing-events
+                     :event-type "updateInitialPrecoDeckSelection"
+                     :count (count deck-events)})))
+  (let [selections (map (fn [event]
+                          (let [player-id (extract-channel-player-id (:channel event))
+                                private   (get-in event [:args :args :_private])
+                                selection (:selection private)]
+                            (when-not player-id
+                              (throw (ex-info "Cannot extract player ID from channel"
+                                              {:type :invalid-replay
+                                               :channel (:channel event)})))
+                            {:player-id player-id
+                             :selection selection
+                             :api       (:API private)}))
+                        deck-events)]
+    (if (every? #(= "API" (:selection %)) selections)
+      (into {} (map (fn [{:keys [player-id api]}]
+                      [player-id {:deck-name (:deckName api)
+                                  :deck-id   (:id api)
+                                  :faction   (:faction api)}])
+                    selections))
+      (do (log/info "Preconstructed deck detected, skipping replay")
+          nil))))
 
-(defn- extract-winner [events]
-  (let [state-changes (filter #(= "gameStateChange" (:type %)) events)
-        with-result   (filter #(get-in % [:args :args :result]) state-changes)
+(defn- extract-winner [state-changes]
+  (let [with-result   (filter #(get-in % [:args :args :result]) state-changes)
         last-with-res (last with-result)]
     (when-not last-with-res
       (throw (ex-info "No gameStateChange with result found"
@@ -137,10 +133,11 @@
   (let [parsed          (json/parse-string replay-json-string true)
         logs            (validate-replay-structure parsed)
         events          (flatten-events logs)
-        table-id        (extract-table-id events)
-        players         (extract-players events)
-        deck-selections (extract-deck-selections events)]
+        events-by-type  (group-by :type events)
+        table-id        (extract-table-id logs)
+        players         (extract-players (get events-by-type "setupPlayer"))
+        deck-selections (extract-deck-selections (get events-by-type "updateInitialPrecoDeckSelection"))]
     (when deck-selections
       (validate-consistency players deck-selections)
-      (when-let [winner-pid (extract-winner events)]
+      (when-let [winner-pid (extract-winner (get events-by-type "gameStateChange"))]
         (build-game-map table-id players deck-selections winner-pid)))))
