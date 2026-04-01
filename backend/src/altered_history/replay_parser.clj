@@ -24,7 +24,7 @@
     (when-not tid
       (throw (ex-info "No table_id found in logs"
                       {:type :invalid-replay})))
-    (str tid)))
+    (long tid)))
 
 (defn- extract-players [setup-events]
   (when-not (= 2 (count setup-events))

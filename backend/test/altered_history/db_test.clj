@@ -14,7 +14,7 @@
 (use-fixtures :each with-test-db)
 
 (defn- sample-game
-  ([] (sample-game "123"))
+  ([] (sample-game 123))
   ([table-id]
    {:table_id          table-id
     :player1_id        "p1"
@@ -34,18 +34,18 @@
     (is (= :inserted (db/insert-game! *ds* (sample-game)))))
 
   (testing "returns :already-exists for a duplicate table_id"
-    (db/insert-game! *ds* (sample-game "456"))
-    (is (= :already-exists (db/insert-game! *ds* (sample-game "456"))))))
+    (db/insert-game! *ds* (sample-game 456))
+    (is (= :already-exists (db/insert-game! *ds* (sample-game 456))))))
 
 (deftest game-exists-test
   (testing "returns false when the table_id does not exist"
-    (is (false? (db/game-exists? *ds* "nonexistent"))))
+    (is (false? (db/game-exists? *ds* 999999))))
 
   (testing "returns true after insertion"
-    (db/insert-game! *ds* (sample-game "100"))
-    (is (true? (db/game-exists? *ds* "100")))))
+    (db/insert-game! *ds* (sample-game 100))
+    (is (true? (db/game-exists? *ds* 100)))))
 
 (deftest migrations-test
   (testing "migrations are idempotent (running twice does not throw)"
     (db/run-migrations! *ds*)
-    (is (= :inserted (db/insert-game! *ds* (sample-game "idempotent"))))))
+    (is (= :inserted (db/insert-game! *ds* (sample-game 999))))))

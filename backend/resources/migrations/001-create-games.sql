@@ -1,5 +1,5 @@
 CREATE TABLE IF NOT EXISTS games (
-  table_id          TEXT PRIMARY KEY,
+  table_id          INTEGER PRIMARY KEY,
   player1_id        TEXT NOT NULL,
   player1_hero      TEXT NOT NULL,
   player1_faction   TEXT NOT NULL,
