@@ -3,6 +3,11 @@
   "name": "AlteredHistory",
   "version": "0.1.0",
   "description": "Sync your Altered game history from Board Game Arena",
+  "permissions": [
+    "scripting",
+    "activeTab",
+    "storage"
+  ],
   "host_permissions": [
     "https://boardgamearena.com/*",
     "https://*.boardgamearena.com/*"
@@ -10,6 +15,13 @@
   "background": {
     "service_worker": "service-worker.js"
   },
+  "content_scripts": [
+    {
+      "matches": ["*://boardgamearena.com/*"],
+      "js": ["content-script.js"],
+      "run_at": "document_idle"
+    }
+  ],
   "action": {
     "default_popup": "popup.html",
     "default_icon": {

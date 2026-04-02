@@ -49,8 +49,8 @@ Phase 4 (tests E2E) :
 
 | Story | Description | Status |
 |-------|-------------|--------|
-| [EXT-1](stories/EXT-1.md) | Scaffolding de l'extension Manifest V3 | [ ] |
-| [EXT-2](stories/EXT-2.md) | Récupération du X-Request-Token | [ ] |
+| [EXT-1](stories/EXT-1.md) | Scaffolding de l'extension Manifest V3 | [x] |
+| [EXT-2](stories/EXT-2.md) | Récupération du X-Request-Token | [x] |
 | [EXT-3](stories/EXT-3.md) | Détection de la session BGA et récupération du player ID | [ ] |
 | [EXT-4](stories/EXT-4.md) | Collecte et envoi des replays | [ ] |
 
