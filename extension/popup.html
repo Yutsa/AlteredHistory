@@ -22,11 +22,29 @@
       margin: 0;
       line-height: 1.4;
     }
+    .hidden {
+      display: none;
+    }
+    .player-name {
+      color: #6c3fb5;
+      font-weight: 600;
+    }
+    .status-icon {
+      margin-right: 4px;
+    }
   </style>
 </head>
 <body>
   <h1>AlteredHistory</h1>
-  <p>Extension under development.</p>
+  <div id="status-loading">
+    <p>Checking connection...</p>
+  </div>
+  <div id="status-connected" class="hidden">
+    <p><span class="status-icon">&#9989;</span>Connected as <span id="player-name" class="player-name"></span></p>
+  </div>
+  <div id="status-disconnected" class="hidden">
+    <p>Please navigate to your BGA game history page while logged in, then reopen this popup.</p>
+  </div>
   <script src="popup.js"></script>
 </body>
 </html>
