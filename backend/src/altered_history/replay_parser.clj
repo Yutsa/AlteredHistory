@@ -1,6 +1,5 @@
 (ns altered-history.replay-parser
-  (:require [cheshire.core :as json]
-            [clojure.tools.logging :as log]))
+  (:require [clojure.tools.logging :as log]))
 
 (defn- flatten-events
   "Flattens data.logs packets into a seq of event maps,
@@ -127,11 +126,10 @@
      :winner_player_id  winner-pid}))
 
 (defn parse-replay
-  "Parses a BGA replay JSON string and returns a map compatible with insert-game!,
+  "Processes a parsed BGA replay map and returns a map compatible with insert-game!,
    or nil if the replay should be skipped (precon deck, tie)."
-  [replay-json-string]
-  (let [parsed          (json/parse-string replay-json-string true)
-        logs            (validate-replay-structure parsed)
+  [parsed]
+  (let [logs            (validate-replay-structure parsed)
         events          (flatten-events logs)
         events-by-type  (group-by :type events)
         table-id        (extract-table-id logs)

@@ -1,9 +1,7 @@
 (ns altered-history.replay-parser-test
   (:require [clojure.test :refer [deftest is testing]]
-            [altered-history.replay-parser :as parser]))
-
-(defn- load-replay [filename]
-  (slurp (str "../doc/" filename)))
+            [altered-history.replay-parser :as parser]
+            [altered-history.test-helpers :refer [load-replay]]))
 
 (deftest parse-normal-game-test
   (testing "extracts all fields from a normal game replay"
@@ -46,14 +44,10 @@
     (is (nil? (parser/parse-replay (load-replay "sample_replay_precon.json"))))))
 
 (deftest parse-invalid-input-test
-  (testing "throws on invalid JSON"
-    (is (thrown? com.fasterxml.jackson.core.JsonParseException
-          (parser/parse-replay "not json"))))
-
   (testing "throws on missing data.logs"
     (is (thrown? clojure.lang.ExceptionInfo
-          (parser/parse-replay "{\"status\":1,\"data\":{}}"))))
+          (parser/parse-replay {:status 1 :data {}}))))
 
   (testing "throws on unexpected status"
     (is (thrown? clojure.lang.ExceptionInfo
-          (parser/parse-replay "{\"status\":0,\"data\":{\"logs\":[]}}")))))
+          (parser/parse-replay {:status 0 :data {:logs []}})))))

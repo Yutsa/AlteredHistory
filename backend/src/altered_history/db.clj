@@ -6,6 +6,9 @@
 
 (defonce ^:private ds-atom (atom nil))
 
+(defn datasource []
+  @ds-atom)
+
 (defn- default-db-spec []
   {:dbtype "sqlite"
    :dbname (or (System/getenv "DATABASE_PATH") "data/altered_history.db")})

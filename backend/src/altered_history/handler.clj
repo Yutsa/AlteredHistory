@@ -1,7 +1,7 @@
 (ns altered-history.handler
   (:require [clojure.tools.logging :as log]
             [reitit.ring :as ring]
-            [ring.middleware.json :refer [wrap-json-response]]
+            [ring.middleware.json :refer [wrap-json-response wrap-json-body]]
             [altered-history.routes :as routes]))
 
 (defn wrap-request-logging [handler]
@@ -18,4 +18,5 @@
         (ring/create-default-handler
           {:not-found routes/not-found-handler}))
       wrap-request-logging
+      (wrap-json-body {:keywords? true})
       wrap-json-response))
