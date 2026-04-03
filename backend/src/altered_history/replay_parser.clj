@@ -32,9 +32,10 @@
                      :count (count setup-events)})))
   (mapv (fn [event]
           (let [args (:args event)]
-            {:player-id (str (:player_id args))
-             :hero      (get-in args [:card :properties :name])
-             :faction   (get-in args [:card :properties :faction])}))
+            {:player-id   (str (:player_id args))
+             :player-name (str (:player_name args))
+             :hero        (get-in args [:card :properties :name])
+             :faction     (get-in args [:card :properties :faction])}))
         setup-events))
 
 (defn- extract-deck-selections [deck-events]
@@ -109,20 +110,22 @@
                       {:type :invalid-replay})))
     logs))
 
-(defn- build-game-map [table-id [p1 p2] deck-selections winner-pid]
-  (let [d1 (get deck-selections (:player-id p1))
-        d2 (get deck-selections (:player-id p2))]
+(defn- build-game-map [table-id [player1 player2] deck-selections winner-pid]
+  (let [deck1 (get deck-selections (:player-id player1))
+        deck2 (get deck-selections (:player-id player2))]
     {:table_id          table-id
-     :player1_id        (:player-id p1)
-     :player1_hero      (:hero p1)
-     :player1_faction   (:faction p1)
-     :player1_deck_name (:deck-name d1)
-     :player1_deck_id   (:deck-id d1)
-     :player2_id        (:player-id p2)
-     :player2_hero      (:hero p2)
-     :player2_faction   (:faction p2)
-     :player2_deck_name (:deck-name d2)
-     :player2_deck_id   (:deck-id d2)
+     :player1_id        (:player-id player1)
+     :player1_name      (:player-name player1)
+     :player1_hero      (:hero player1)
+     :player1_faction   (:faction player1)
+     :player1_deck_name (:deck-name deck1)
+     :player1_deck_id   (:deck-id deck1)
+     :player2_id        (:player-id player2)
+     :player2_name      (:player-name player2)
+     :player2_hero      (:hero player2)
+     :player2_faction   (:faction player2)
+     :player2_deck_name (:deck-name deck2)
+     :player2_deck_id   (:deck-id deck2)
      :winner_player_id  winner-pid}))
 
 (defn parse-replay

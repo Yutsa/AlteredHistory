@@ -1,6 +1,7 @@
 (ns altered-history.db
   (:require [clojure.tools.logging :as log]
             [next.jdbc :as jdbc]
+            [next.jdbc.result-set :as rs]
             [clojure.java.io :as io]
             [clojure.string :as str]))
 
@@ -39,6 +40,13 @@
 (defn game-exists? [ds table-id]
   (some? (jdbc/execute-one! ds
            ["SELECT 1 FROM games WHERE table_id = ? LIMIT 1" table-id])))
+
+(defn find-player-games [ds player-name limit offset]
+  (let [name-lower (str/lower-case player-name)]
+    (jdbc/execute! ds
+      ["SELECT *, COUNT(*) OVER() AS total_count FROM games WHERE LOWER(player1_name) = ? OR LOWER(player2_name) = ? ORDER BY played_at DESC LIMIT ? OFFSET ?"
+       name-lower name-lower limit offset]
+      {:builder-fn rs/as-unqualified-maps})))
 
 (defn init! []
   (let [db-spec (default-db-spec)

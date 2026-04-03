@@ -16,22 +16,22 @@
 
 (deftest process-replay-test
   (testing "returns :created for a valid replay"
-    (let [result (replay/process-replay! (db/datasource) (load-replay "sample_replay1.json"))]
+    (let [result (replay/process-replay! (db/datasource) (load-replay "sample_replay1.json") 1700000000)]
       (is (= :inserted (:status result)))
       (is (= 829783480 (:table_id result)))))
 
   (testing "returns :already-exists for a duplicate replay"
     (let [replay (load-replay "sample_replay1.json")
-          _first (replay/process-replay! (db/datasource) replay)
-          result (replay/process-replay! (db/datasource) replay)]
+          _first (replay/process-replay! (db/datasource) replay 1700000000)
+          result (replay/process-replay! (db/datasource) replay 1700000000)]
       (is (= :already-exists (:status result)))
       (is (= 829783480 (:table_id result)))))
 
   (testing "returns :skipped for a preconstructed deck replay"
-    (let [result (replay/process-replay! (db/datasource) (load-replay "sample_replay_precon.json"))]
+    (let [result (replay/process-replay! (db/datasource) (load-replay "sample_replay_precon.json") 1700000000)]
       (is (= :skipped (:status result)))
       (is (nil? (:table_id result)))))
 
   (testing "throws ExceptionInfo for an invalid replay"
     (is (thrown? clojure.lang.ExceptionInfo
-                (replay/process-replay! (db/datasource) {:status 1 :data {}})))))
+                (replay/process-replay! (db/datasource) {:status 1 :data {}} 1700000000)))))
