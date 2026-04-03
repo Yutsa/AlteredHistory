@@ -8,4 +8,10 @@ window.addEventListener("message", (event) => {
   });
 });
 
+chrome.runtime.onMessage.addListener((message) => {
+  if (message.type !== "ALTERED_HISTORY_LOG") return;
+  const method = message.level === "warn" ? "warn" : "info";
+  console[method](`[AlteredHistory] ${message.text}`);
+});
+
 chrome.runtime.sendMessage({ type: "BGA_PAGE_LOADED" });

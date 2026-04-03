@@ -11,6 +11,13 @@ class SessionExpiredError extends Error {
   }
 }
 
+async function logToPage(level, text) {
+  const tabs = await chrome.tabs.query({ url: "*://boardgamearena.com/*" });
+  for (const tab of tabs) {
+    chrome.tabs.sendMessage(tab.id, { type: "ALTERED_HISTORY_LOG", level, text }).catch(() => {});
+  }
+}
+
 function delay(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -51,7 +58,7 @@ async function fetchWithRetry(url, options) {
 }
 
 async function collectTableIds(playerId, cutoffTimestamp) {
-  const tableIds = [];
+  const tables = [];
   let page = 1;
 
   while (true) {
@@ -76,17 +83,21 @@ async function collectTableIds(playerId, cutoffTimestamp) {
       credentials: "include",
     });
     const json = await response.json();
-    const tables = json?.data?.tables ?? [];
+    const pageTables = json?.data?.tables ?? [];
 
-    if (tables.length === 0) break;
+    if (pageTables.length === 0) break;
 
     let reachedCutoff = false;
-    for (const table of tables) {
+    for (const table of pageTables) {
       if (parseInt(table.end, 10) < cutoffTimestamp) {
         reachedCutoff = true;
         break;
       }
-      tableIds.push(table.table_id);
+      if (table.start != null) {
+        tables.push({ tableId: table.table_id, start: table.start });
+      } else {
+        logToPage("warn", `table ${table.table_id} has no start timestamp, skipping`);
+      }
     }
 
     await updateImportState({ collectingPage: page });
@@ -95,14 +106,14 @@ async function collectTableIds(playerId, cutoffTimestamp) {
     page++;
   }
 
-  return tableIds;
+  return tables;
 }
 
-async function sendReplays(tableIds) {
+async function sendReplays(tables) {
   const counters = { imported: 0, alreadyExists: 0, skipped: 0, failed: 0 };
 
-  for (let i = 0; i < tableIds.length; i++) {
-    const tableId = tableIds[i];
+  for (let i = 0; i < tables.length; i++) {
+    const { tableId, start } = tables[i];
 
     try {
       await randomDelay();
@@ -124,6 +135,12 @@ async function sendReplays(tableIds) {
       const replayJson = JSON.parse(replayBody);
 
       if (replayJson.status === "0" || replayJson.status === 0) {
+        const gameDate = new Date(parseInt(start, 10) * 1000).toLocaleDateString();
+        const hasData = replayJson.data?.logs?.length > 0;
+        const reason = hasData
+          ? "game abandoned or cancelled"
+          : "replay data unavailable (BGA purges old replays)";
+        logToPage("warn", `table ${tableId} (${gameDate}): ${reason}, skipping`);
         counters.skipped++;
         await updateImportState({ current: i + 1, ...counters });
         continue;
@@ -132,7 +149,7 @@ async function sendReplays(tableIds) {
       const backendResponse = await fetch(`${BACKEND_URL}/api/replays`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: replayBody,
+        body: JSON.stringify({ replay: replayJson, start: parseInt(start, 10) }),
       });
       const backendJson = await backendResponse.json();
 
@@ -141,8 +158,10 @@ async function sendReplays(tableIds) {
       } else if (backendJson.status === "already_exists") {
         counters.alreadyExists++;
       } else if (backendJson.status === "skipped") {
+        logToPage("info", `table ${tableId} skipped by backend`);
         counters.skipped++;
       } else {
+        logToPage("warn", `table ${tableId} rejected by backend (HTTP ${backendResponse.status}): ${backendJson.error || "unknown error"}`);
         counters.failed++;
       }
     } catch (err) {
@@ -191,15 +210,15 @@ async function runImport(cutoffDate) {
 
   try {
     const { playerId } = await chrome.storage.local.get("playerId");
-    const tableIds = await collectTableIds(playerId, cutoffTimestamp);
+    const tables = await collectTableIds(playerId, cutoffTimestamp);
 
     await updateImportState({
       status: "sending",
-      total: tableIds.length,
+      total: tables.length,
       current: 0,
     });
 
-    await sendReplays(tableIds);
+    await sendReplays(tables);
     await updateImportState({ status: "done" });
   } catch (err) {
     if (err instanceof SessionExpiredError) {

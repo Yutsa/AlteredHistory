@@ -38,7 +38,7 @@
              :faction     (get-in args [:card :properties :faction])}))
         setup-events))
 
-(defn- extract-deck-selections [deck-events]
+(defn- extract-deck-selections [table-id deck-events]
   (when-not (= 2 (count deck-events))
     (throw (ex-info (str "Expected 2 updateInitialPrecoDeckSelection events, found "
                          (count deck-events))
@@ -63,10 +63,10 @@
                                   :deck-id   (:id api)
                                   :faction   (:faction api)}])
                     selections))
-      (do (log/info "Preconstructed deck detected, skipping replay")
+      (do (log/info "Preconstructed deck detected, skipping replay" {:table-id table-id})
           nil))))
 
-(defn- extract-winner [state-changes]
+(defn- extract-winner [table-id state-changes]
   (let [with-result   (filter #(get-in % [:args :args :result]) state-changes)
         last-with-res (last with-result)]
     (when-not last-with-res
@@ -74,7 +74,7 @@
                       {:type :missing-events :event-type "gameStateChange"})))
     (let [result (get-in last-with-res [:args :args :result])]
       (if (every? :tie result)
-        (do (log/info "Tie detected, skipping replay")
+        (do (log/info "Tie detected, skipping replay" {:table-id table-id})
             nil)
         (let [winner (first (filter #(and (= "1" (:score %)) (= 1 (:rank %))) result))]
           (when-not winner
@@ -137,8 +137,8 @@
         events-by-type  (group-by :type events)
         table-id        (extract-table-id logs)
         players         (extract-players (get events-by-type "setupPlayer"))
-        deck-selections (extract-deck-selections (get events-by-type "updateInitialPrecoDeckSelection"))]
+        deck-selections (extract-deck-selections table-id (get events-by-type "updateInitialPrecoDeckSelection"))]
     (when deck-selections
       (validate-consistency players deck-selections)
-      (when-let [winner-pid (extract-winner (get events-by-type "gameStateChange"))]
+      (when-let [winner-pid (extract-winner table-id (get events-by-type "gameStateChange"))]
         (build-game-map table-id players deck-selections winner-pid)))))
