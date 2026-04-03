@@ -1,18 +1,54 @@
-# MVP — AlteredHistory
+# MVP 2 — Frontend Historique des parties
 
 ## Objectif
 
-Avoir un pipeline fonctionnel de bout en bout : l'extension Chrome récupère les replays BGA et les envoie au backend Clojure qui parse et stocke les informations essentielles de chaque partie.
+Permettre à n'importe qui de consulter l'historique des parties d'un joueur BGA en entrant son pseudo. L'historique est paginé et affiche les informations clés de chaque partie.
 
-## Données stockées par partie
+## Stack
 
-- `table_id` (unique en BDD)
-- Pour chaque joueur (x2) :
-  - Héros (nom)
-  - Faction
-  - Nom du deck
-  - ID du deck (API Altered)
-- Gagnant de la partie
+- **Frontend** : ClojureScript + Replicant (rendu hiccup, zéro dépendance React)
+- **Backend** : Clojure (existant) — nouveaux endpoints API
+
+## Fonctionnalités
+
+### Recherche par pseudo
+
+- Un champ de recherche permet d'entrer un pseudo BGA
+- La recherche renvoie l'historique des parties de ce joueur
+
+### Liste des parties (paginée)
+
+Pour chaque partie, afficher :
+- Date de la partie
+- Adversaire
+- Faction et héros de chaque joueur
+- Nom du deck de chaque joueur
+- Résultat (victoire / défaite)
+
+La liste est paginée pour gérer les gros volumes.
+
+### Page détail d'une partie (optionnel)
+
+- Vue détaillée reprenant toutes les infos d'une partie
+- Lien vers le replay BGA si disponible
+
+---
+
+## Phases
+
+```
+Phase 1 — API Backend (séquentielle) :
+  ├── BACK-5  Endpoint GET /api/players/:name/games (paginé)
+  └── BACK-6  Endpoint GET /api/games/:id (détail d'une partie)
+
+Phase 2 — Frontend (séquentielle) :
+  ├── FRONT-1  Scaffolding projet ClojureScript + Replicant
+  ├── FRONT-2  Page recherche par pseudo
+  └── FRONT-3  Page historique avec pagination
+
+Phase 3 — Intégration :
+  └── INT-3    Connexion front/back, cas limites
+```
 
 ---
 
@@ -24,58 +60,33 @@ Avoir un pipeline fonctionnel de bout en bout : l'extension Chrome récupère le
 - `[~]` En cours
 - `[x]` Terminé
 
-### Parallélisation
-
-```
-Phase 1 (parallélisable) :
-  ├── EXT-1, EXT-2, EXT-3    (Extension Chrome)
-  └── BACK-1, BACK-2          (Backend Clojure)
-
-Phase 2 (séquentielle, dépend de Phase 1) :
-  ├── EXT-4   (dépend de EXT-1/2/3)
-  ├── BACK-3  (dépend de BACK-1/2)
-  └── BACK-4  (dépend de BACK-3)
-
-Phase 3 (intégration, dépend de Phase 2) :
-  └── INT-1   (dépend de EXT-4 + BACK-4)
-
-Phase 4 (tests E2E) :
-  └── INT-2   (dépend de INT-1)
-```
-
----
-
-### Extension Chrome
+### Backend
 
 | Story | Description | Status |
 |-------|-------------|--------|
-| [EXT-1](stories/EXT-1.md) | Scaffolding de l'extension Manifest V3 | [x] |
-| [EXT-2](stories/EXT-2.md) | Récupération du X-Request-Token | [x] |
-| [EXT-3](stories/EXT-3.md) | Détection de la session BGA et récupération du player ID | [ ] |
-| [EXT-4](stories/EXT-4.md) | Collecte et envoi des replays | [ ] |
+| [BACK-5](stories/BACK-5.md) | Endpoint GET /api/players/:name/games (historique paginé) | [ ] |
+| [BACK-6](stories/BACK-6.md) | Endpoint GET /api/games/:id (détail partie) | [ ] |
 
-### Backend Clojure
+### Frontend
 
 | Story | Description | Status |
 |-------|-------------|--------|
-| [BACK-1](stories/BACK-1.md) | Scaffolding du projet Clojure | [ ] |
-| [BACK-2](stories/BACK-2.md) | Base de données et schéma | [ ] |
-| [BACK-3](stories/BACK-3.md) | Parser de replay | [ ] |
-| [BACK-4](stories/BACK-4.md) | Endpoint POST /api/replays | [ ] |
+| [FRONT-1](stories/FRONT-1.md) | Scaffolding ClojureScript + Replicant | [ ] |
+| [FRONT-2](stories/FRONT-2.md) | Page de recherche par pseudo | [ ] |
+| [FRONT-3](stories/FRONT-3.md) | Page historique paginée | [ ] |
 
 ### Intégration
 
 | Story | Description | Status |
 |-------|-------------|--------|
-| [INT-1](stories/INT-1.md) | Connecter l'extension au backend | [ ] |
-| [INT-2](stories/INT-2.md) | Test end-to-end manuel | [ ] |
+| [INT-3](stories/INT-3.md) | Intégration front/back + cas limites | [ ] |
 
 ---
 
-## Hors scope MVP
+## Hors scope
 
-- Application web front-end (consultation)
-- Authentification utilisateur côté backend
-- Déploiement en production (le MVP tourne en local)
-- Historique des cartes jouées pendant la partie
-- Stockage des ELO / scores arena
+- Authentification utilisateur
+- Statistiques avancées (winrate, matchups, etc.)
+- Déploiement en production
+- Filtres ou tri sur l'historique
+- Page détail d'une partie (optionnel, à réévaluer)
